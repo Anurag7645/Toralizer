@@ -40,7 +40,7 @@ or when the request is rejected or the operation fails.
 		+----+----+----+----+----+----+----+----+
 		| VN | CD | DSTPORT |      DSTIP        |
 		+----+----+----+----+----+----+----+----+
- # of bytes:	   1    1      2              4
+        	   1    1      2              4
 
 VN is the version of the reply code and should be 0. CD is the result
 code with one of the following values:
