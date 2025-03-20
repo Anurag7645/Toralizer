@@ -1,7 +1,17 @@
 /* toralize.c */
+
+/* 
+
+1. Turn the client into a lib (shared library) .so
+2. Turn main() into our own connect()
+3. Replace regular connect()
+4. Grab the ip and port from original connect()
+
+*/
+
 #include "toralize.h"
 
-Req *request(const char *dstip, const int dstport) 
+Req *request(struct sockaddr_in *sock2) 
 {
     Req *req;
 
@@ -9,37 +19,40 @@ Req *request(const char *dstip, const int dstport)
 
     req->vn = 4;
     req->cd = 1;
-    req->dstport = htons(dstport);
-    req->dstip = inet_addr(dstip);
+    req->dstport = sock2->sin_port;
+    req->dstip = sock2->sin_addr.s_addr;
     strncpy(req->userid, USERNAME, 8);
 
     return req;
 
 }
 
-int main(int argc, char *argv[]) 
+/*int main(int argc, char *argv[])*/ 
+int connect(int s2, const struct sockaddr *sock2,socklen_t addrlen)
 {
-    char *host;
-    int port, s;
+    // char *host;
+    int s;
     struct sockaddr_in sock;
     Req *req;
     Res *res;
     char buf[ressize];
     int success;
     char tmp[512];
+    int (*p)(int, const struct sockaddr*, socklen_t);
 
     /* predicate - property*/
 
-    if (argc < 3)
-    {
-        fprintf(stderr, "Usage: %s <host> <port>\n",
-        argv[0]);
+    // if (argc < 3)
+    // {
+    //     fprintf(stderr, "Usage: %s <host> <port>\n",
+    //     argv[0]);
 
-        return -1;
-    }
+    //     return -1;
+    // }
 
-    host = argv[1];
-    port = atoi(argv[2]);
+    // host = argv[1];
+    // port = atoi(argv[2]);
+    p = dlsym(RTLD_NEXT, "connect");
 
     s =socket(AF_INET, SOCK_STREAM, 0);
     if (s<0) 
@@ -53,7 +66,7 @@ int main(int argc, char *argv[])
     sock.sin_port = htons(PROXYPORT);
     sock.sin_addr.s_addr = inet_addr(PROXY);
 
-    if (connect(s, (struct sockaddr *)&sock, sizeof(sock)))
+    if (p(s, (struct sockaddr *)&sock, sizeof(sock)))
     {
         perror("connect");
 
@@ -61,7 +74,7 @@ int main(int argc, char *argv[])
     }
 
     printf("Connected to proxy\n");
-    req = request(host, port);
+    req = request((struct sockaddr_in *)sock2);
     write(s, req, reqsize);
 
     memset(buf, 0, ressize);
@@ -86,21 +99,24 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    printf("Successfully connected through the proxy to %s:%d\n", host, port);
+    printf("Successfully connected through the proxy to\n");
     
-    memset(tmp, 0, 512);
-    snprintf(tmp, 511,
-        "HEAD / HTTP/1.0\r\n"
-        "Host: www.networktechnology.org\r\n"
-        "\r\n"
-    );
-    write(s, tmp, strlen(tmp));
+    dup2(s,s2);
 
-    memset(tmp, 0, 512);
-    read(s, tmp, 511);
-    printf("'%s'\n", tmp);
+    // memset(tmp, 0, 512);
+    // snprintf(tmp, 511,
+    //     "HEAD / HTTP/1.0\r\n"
+    //     "Host: www.networktechnology.org\r\n"
+    //     "\r\n"
+    // );
+    // write(s, tmp, strlen(tmp));
 
-    close(s);
+    // memset(tmp, 0, 512);
+    // read(s, tmp, 511);
+    // printf("'%s'\n", tmp);
+
+    // close(s);
+
     free(req);
     
     return 0;

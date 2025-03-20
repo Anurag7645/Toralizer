@@ -59,3 +59,8 @@ the client of a failed or rejected request. For a successful request,
 the SOCKS server gets ready to relay traffic on both directions. This
 enables the client to do I/O on its connection as if it were directly
 connected to the application server.
+
+
+## Hooking Shared Library in C
+
+Note: http://mittip.se
